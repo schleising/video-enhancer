@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image, ImageFilter
 
@@ -20,7 +20,7 @@ class ImageEnhancer:
         self.output_folder.mkdir(parents=True, exist_ok=True)
 
         # Create a process pool
-        with ProcessPoolExecutor() as executor:
+        with ThreadPoolExecutor() as executor:
             jobs = []
             for input_file in self.input_files:
                 # Submit a job to the process pool
