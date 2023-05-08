@@ -2,7 +2,10 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from ffmpeg import FFmpeg, Progress
+from ffmpeg import FFmpeg
+from ffmpeg import Progress as FFmpegProgress
+
+from rich.progress import Progress as RichProgress
 
 from . import ImageEnhancer
 from .models import VideoInformation
@@ -87,12 +90,9 @@ class VideoProcessor:
             .output(temp_audio_file,
                     {'c:v': 'copy'})
         )
-    
-        @ffmpeg.on('progress')
-        def _on_progress(progress: Progress) -> None:
-            print(progress)
 
-        ffmpeg.execute()
+        # Execute the task
+        self._execute_task(ffmpeg, 'Extracting audio...')
 
     def _extract_frames(self) -> None:
         # Extract the frames
@@ -102,11 +102,8 @@ class VideoProcessor:
             .output(f'{self.input_temp_folder}/%05d.png')
         )
 
-        @ffmpeg.on('progress')
-        def _on_progress(progress: Progress) -> None:
-            print(progress)
-
-        ffmpeg.execute()
+        # Execute the task
+        self._execute_task(ffmpeg, 'Extracting frames...')
 
     def _create_video(self) -> None:
         # Create a temporary file for the video
@@ -127,11 +124,8 @@ class VideoProcessor:
             )
         )
 
-        @ffmpeg.on('progress')
-        def _on_progress(progress: Progress) -> None:
-            print(progress)
-
-        ffmpeg.execute()
+        # Execute the task
+        self._execute_task(ffmpeg, 'Creating video...')
 
     def _add_audio(self) -> None:
         # Add the audio to the video
@@ -147,8 +141,23 @@ class VideoProcessor:
             )
         )
 
-        @ffmpeg.on('progress')
-        def _on_progress(progress: Progress) -> None:
-            print(progress)
+        # Execute the task
+        self._execute_task(ffmpeg, 'Adding audio...')
 
-        ffmpeg.execute()
+    def _execute_task(self, ffmpeg: FFmpeg, task_name: str) -> None:
+        # Create a progress bar
+        with RichProgress() as rich_progress:
+            # Add a task to the progress bar
+            task = rich_progress.add_task(f'{task_name:20}', total=self.nb_frames)
+
+            # Update the progress bar when ffmpeg emits a progress event
+            @ffmpeg.on('progress')
+            def _on_progress(ffmpeg_progress: FFmpegProgress) -> None:
+                # Update the progress bar
+                rich_progress.update(task, completed=ffmpeg_progress.frame)
+
+            # Execute the ffmpeg command
+            ffmpeg.execute()
+
+            # Update the progress bar to show that the task is complete
+            rich_progress.update(task, completed=self.nb_frames)

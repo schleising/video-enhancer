@@ -22,12 +22,12 @@ class ImageEnhancer:
         # Create a process pool
         with ProcessPoolExecutor() as executor:
             jobs = []
-            for input_file in track(self.input_files, description='Submitting jobs...'):
-                # print(f'Submitting {input_file.name}...')
+            for input_file in self.input_files:
+                # Submit a job to the process pool
                 jobs.append(executor.submit(self._convert_image, input_file))
 
             # Wait for all jobs to finish
-            for job in track(jobs, description='Waiting for jobs to finish...'):
+            for job in track(jobs, description='Enhancing frames... '):
                 job.result()
 
     def _convert_image(self, input_file: Path) -> bool:
